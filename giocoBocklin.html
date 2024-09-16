@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gioco di Memoria</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0e6d6; /* Colore avorio per lo sfondo */
+            margin: 0;
+            padding: 20px;
+        }
+
+        #title-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 36px;
+            color: #333;
+            margin: 0;
+        }
+
+        h2 {
+            font-size: 24px;
+            color: #666;
+            margin: 0;
+        }
+
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 150px);
+            grid-gap: 10px;
+            background-color: #ffffff; /* Colore bianco per lo sfondo delle carte */
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .card {
+            width: 150px;
+            height: 150px;
+            background-color: #003300; /* Colore verde scuro per il dorso delle carte */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid #003300;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .card img {
+            width: 100%;
+            height: 100%;
+            display: none;
+            border-radius: 8px;
+        }
+
+        .flipped img {
+            display: block;
+        }
+
+        .matched {
+            background-color: #003300; /* Colore verde scuro per le carte abbinate */
+            cursor: default;
+        }
+
+        #completion-dialog {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            background-color: #f0e6d6; /* Colore avorio per la finestra di dialogo */
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #completion-dialog h2 {
+            margin: 0;
+            font-size: 24px;
+            color: #333;
+            font-family: 'Arial', sans-serif; /* Font sans-serif elegante */
+        }
+
+        #reset-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            background-color: #333; /* Colore antracite per il pulsante */
+            color: #f0e6d6; /* Colore avorio per il testo del pulsante */
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="title-container">
+        <h1>Gioco di memoria</h1>
+        <h2>Trova le coppie</h2>
+    </div>
+
+    <div id="game-board"></div>
+
+    <div id="completion-dialog">
+        <h2>Ottimo lavoro!</h2>
+        <button id="reset-button">Reset</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const cardImages = [
+                'https://uploads0.wikiart.org/images/arnold-b-cklin/the-chapel-1898.jpg!PinterestSmall.jpg',
+                'https://uploads6.wikiart.org/images/arnold-b-cklin/venus-anadyomene-1872.jpg!PinterestSmall.jpg',
+                'https://uploads5.wikiart.org/images/arnold-b-cklin/spring-1875.jpg!PinterestSmall.jpg',
+                'https://uploads6.wikiart.org/images/arnold-b-cklin/the-summer-s-day-1881.jpg!PinterestSmall.jpg'
+            ];
+
+            let cardValues = [...cardImages, ...cardImages];
+            cardValues = cardValues.sort(() => 0.5 - Math.random()); // Mescola le carte
+
+            const board = document.getElementById('game-board');
+            const completionDialog = document.getElementById('completion-dialog');
+            const resetButton = document.getElementById('reset-button');
+            let firstCard, secondCard;
+            let lockBoard = false;
+            let matchedCards = 0;
+
+            function createCard(imageUrl) {
+                const card = document.createElement('div');
+                card.className = 'card';
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = 'Dipinti';
+                card.appendChild(img);
+                card.setAttribute('data-value', imageUrl);
+                card.addEventListener('click', flipCard);
+                return card;
+            }
+
+            function setupBoard() {
+                board.innerHTML = '';
+                cardValues.forEach(value => {
+                    const card = createCard(value);
+                    board.appendChild(card);
+                });
+            }
+
+            function flipCard() {
+                if (lockBoard || this.classList.contains('flipped') || this.classList.contains('matched')) return;
+                this.classList.add('flipped');
+                if (!firstCard) {
+                    firstCard = this;
+                    return;
+                }
+                secondCard = this;
+                lockBoard = true;
+                checkForMatch();
+            }
+
+            function checkForMatch() {
+                const isMatch = firstCard.getAttribute('data-value') === secondCard.getAttribute('data-value');
+                isMatch ? disableCards() : unflipCards();
+            }
+
+            function disableCards() {
+                firstCard.classList.add('matched');
+                secondCard.classList.add('matched');
+                matchedCards += 2;
+                if (matchedCards === cardValues.length) {
+                    showCompletionDialog();
+                }
+                resetBoard();
+            }
+
+            function unflipCards() {
+                setTimeout(() => {
+                    firstCard.classList.remove('flipped');
+                    secondCard.classList.remove('flipped');
+                    resetBoard();
+                }, 1000);
+            }
+
+            function resetBoard() {
+                [firstCard, secondCard, lockBoard] = [null, null, false];
+            }
+
+            function showCompletionDialog() {
+                completionDialog.style.display = 'block';
+            }
+
+            function resetGame() {
+                cardValues = [...cardImages, ...cardImages];
+                cardValues = cardValues.sort(() => 0.5 - Math.random());
+                matchedCards = 0;
+                setupBoard();
+                completionDialog.style.display = 'none';
+            }
+
+            resetButton.addEventListener('click', resetGame);
+            setupBoard();
+        });
+    </script>
+</body>
+</html>
